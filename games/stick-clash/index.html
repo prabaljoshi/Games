@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stick Clash</title>
+
+<style>
+body{
+  margin:0;
+  background:#111;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  height:100vh;
+  font-family:Arial, Helvetica, sans-serif;
+  color:white;
+}
+
+#game{
+  background:#e7dede;
+  border:3px solid #555;
+}
+
+.ui{
+  position:absolute;
+  top:20px;
+  width:800px;
+  display:flex;
+  justify-content:space-between;
+  font-size:18px;
+}
+
+.health{
+  width:300px;
+  height:20px;
+  background:#444;
+}
+
+.health-inner{
+  height:100%;
+  background:#00ff88;
+}
+
+.controls{
+  position:absolute;
+  bottom:20px;
+  text-align:center;
+  font-size:14px;
+  opacity:0.8;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="ui">
+  <div class="health"><div id="p1Health" class="health-inner"></div></div>
+  <div class="health"><div id="p2Health" class="health-inner"></div></div>
+</div>
+
+<canvas id="game" width="800" height="400"></canvas>
+
+<div class="controls">
+Player 1: A D Move | W Jump | F Punch<br>
+Player 2: ← → Move | ↑ Jump | / Punch
+</div>
+
+<script>
+
+const canvas = document.getElementById("game")
+const ctx = canvas.getContext("2d")
+
+class Fighter{
+  constructor(x,color,controls){
+    this.x = x
+    this.y = 300
+    this.vx = 0
+    this.vy = 0
+    this.width = 20
+    this.height = 80
+    this.color = color
+    this.health = 100
+    this.controls = controls
+    this.isAttacking = false
+    this.direction = 1
+    this.attackCooldown = false
+  }
+
+  draw(){
+    ctx.strokeStyle = this.color
+    ctx.lineWidth = 4
+
+    // head
+    ctx.beginPath()
+    ctx.arc(this.x,this.y-60,10,0,Math.PI*2)
+    ctx.stroke()
+
+    // body
+    ctx.beginPath()
+    ctx.moveTo(this.x,this.y-50)
+    ctx.lineTo(this.x,this.y)
+    ctx.stroke()
+
+    // arms (punch animation)
+    ctx.beginPath()
+    ctx.moveTo(this.x,this.y-30)
+
+    if(this.isAttacking){
+      ctx.lineTo(this.x + (25 * this.direction), this.y-30)
+    }else{
+      ctx.lineTo(this.x-20,this.y-10)
+      ctx.moveTo(this.x,this.y-30)
+      ctx.lineTo(this.x+20,this.y-10)
+    }
+
+    ctx.stroke()
+
+    // legs
+    ctx.beginPath()
+    ctx.moveTo(this.x,this.y)
+    ctx.lineTo(this.x-15,this.y+30)
+    ctx.moveTo(this.x,this.y)
+    ctx.lineTo(this.x+15,this.y+30)
+    ctx.stroke()
+  }
+
+  update(){
+    this.x += this.vx
+    this.y += this.vy
+
+    this.vy += 0.5
+
+    if(this.y > 300){
+      this.y = 300
+      this.vy = 0
+    }
+
+    if(this.vx > 0) this.direction = 1
+    if(this.vx < 0) this.direction = -1
+
+    this.draw()
+  }
+
+  attack(){
+    if(this.attackCooldown) return
+
+    this.isAttacking = true
+    this.attackCooldown = true
+
+    setTimeout(()=>{
+      this.isAttacking = false
+    },150)
+
+    setTimeout(()=>{
+      this.attackCooldown = false
+    },400)
+  }
+}
+
+const player1 = new Fighter(200,"#00ffcc",{
+  left:"a",
+  right:"d",
+  jump:"w",
+  attack:"f"
+})
+
+const player2 = new Fighter(600,"#ff0066",{
+  left:"ArrowLeft",
+  right:"ArrowRight",
+  jump:"ArrowUp",
+  attack:"/"
+})
+
+const keys = {}
+
+window.addEventListener("keydown",e=>{
+  keys[e.key] = true
+
+  if(e.key === player1.controls.attack) player1.attack()
+  if(e.key === player2.controls.attack) player2.attack()
+})
+
+window.addEventListener("keyup",e=>{
+  keys[e.key] = false
+})
+
+function checkHit(a,b){
+  const attackRange = 40
+
+  if(a.isAttacking &&
+     Math.abs((a.x + attackRange * a.direction) - b.x) < 30 &&
+     Math.abs(a.y - b.y) < 50){
+      b.health -= 2
+      b.vx = 5 * a.direction  // knockback
+  }
+}
+
+function updateHealth(){
+  document.getElementById("p1Health").style.width = player1.health + "%"
+  document.getElementById("p2Health").style.width = player2.health + "%"
+}
+
+function gameLoop(){
+  ctx.clearRect(0,0,canvas.width,canvas.height)
+
+  player1.vx = 0
+  player2.vx = 0
+
+  if(keys[player1.controls.left]) player1.vx = -3
+  if(keys[player1.controls.right]) player1.vx = 3
+  if(keys[player1.controls.jump] && player1.vy === 0) player1.vy = -10
+
+  if(keys[player2.controls.left]) player2.vx = -3
+  if(keys[player2.controls.right]) player2.vx = 3
+  if(keys[player2.controls.jump] && player2.vy === 0) player2.vy = -10
+
+  player1.update()
+  player2.update()
+
+  checkHit(player1,player2)
+  checkHit(player2,player1)
+
+  updateHealth()
+
+  if(player1.health <= 0 || player2.health <= 0){
+    ctx.fillStyle = "white"
+    ctx.font = "40px Arial"
+    ctx.fillText(
+      player1.health <= 0 ? "Player 2 Wins" : "Player 1 Wins",
+      250,
+      200
+    )
+    return
+  }
+
+  requestAnimationFrame(gameLoop)
+}
+
+updateHealth()
+gameLoop()
+
+</script>
+
+</body>
+</html>

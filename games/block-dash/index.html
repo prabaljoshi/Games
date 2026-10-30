@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Block Dash</title>
+  <style>
+    body { margin:0; font-family:sans-serif; background:#222; color:#fff; display:flex; justify-content:center; align-items:center; height:100vh; }
+    canvas { background:#333; border:3px solid #fff; border-radius:12px; }
+    #score { position:absolute; top:20px; left:50%; transform:translateX(-50%); font-size:22px; font-weight:bold; }
+  </style>
+</head>
+<body>
+  <div id="score">Score: 0</div>
+  <canvas id="game" width="600" height="300"></canvas>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+
+let score = 0;
+let gravity = 0.6;
+let jumpStrength = -12;
+let gameOver = false;
+
+// Player
+const player = {
+  x:50,
+  y:canvas.height-60,
+  width:40,
+  height:40,
+  dy:0,
+  jump(){ if(this.y >= canvas.height-this.height){ this.dy = jumpStrength; } }
+};
+
+// Obstacles
+let obstacles = [];
+function spawnObstacle(){
+  const h = 40 + Math.random()*30;
+  obstacles.push({
+    x:canvas.width,
+    y:canvas.height-h,
+    width:30,
+    height:h
+  });
+}
+
+let frame = 0;
+
+function update(){
+  if(gameOver){
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.fillStyle = "#fff";
+    ctx.font = "28px sans-serif";
+    ctx.fillText("Game Over! Press R to Restart", 80, canvas.height/2);
+    return;
+  }
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  // player physics
+  player.dy += gravity;
+  player.y += player.dy;
+  if(player.y >= canvas.height-player.height){
+    player.y = canvas.height-player.height;
+    player.dy = 0;
+  }
+
+  ctx.fillStyle = "#4ade80";
+  ctx.fillRect(player.x, player.y, player.width, player.height);
+
+  // obstacles
+  if(frame % 90 === 0){ spawnObstacle(); }
+  obstacles.forEach(o => { o.x -= 5; });
+  obstacles = obstacles.filter(o => o.x+o.width>0);
+
+  ctx.fillStyle = "#f87171";
+  obstacles.forEach(o => ctx.fillRect(o.x,o.y,o.width,o.height));
+
+  // collision
+  obstacles.forEach(o => {
+    if(player.x < o.x+o.width && player.x+player.width > o.x && player.y < o.y+o.height && player.y+player.height > o.y){
+      gameOver = true;
+    }
+  });
+
+  // score
+  score++;
+  scoreEl.textContent = "Score: "+score;
+
+  frame++;
+  requestAnimationFrame(update);
+}
+
+// Controls
+document.addEventListener("keydown", e => {
+  if(e.code === "Space") player.jump();
+  if(e.code === "ArrowUp") player.jump();
+  if(e.code === "KeyR" && gameOver){
+    // reset
+    score=0; obstacles=[]; frame=0; gameOver=false; player.y=canvas.height-60; player.dy=0;
+    update();
+  }
+});
+
+update();
+</script>
+</body>
+</html>
