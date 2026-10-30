@@ -99,7 +99,7 @@ The games will also be available online through GitHub Pages.
 
 **Live Website:**
 
-`https://YOUR-GITHUB-USERNAME.github.io/games/`
+`https://YOUR-GITHUB-Prabal joshi.github.io/games/`
 
 ## 📚 What I'm Learning
 
